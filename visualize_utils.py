@@ -15,7 +15,7 @@ def visualize_manifest(manifest_record):
     dt = json.loads(augmented_manifest_lines[80])
     visualize_detection('image_0000247.5.png',[(0,1,1075/1920,381/1080,(1075+128)/1920,(274+381)/1080)],['a','b','c'],0.1)
 
-def visualize_detection(img_file, dets, classes=[], thresh=0.6):
+def visualize_detection(img_file, dets, classes=[], thresh=0.6, source_bucket="ml-materials", source_prefix="object_detection_dataset/source_images"):
     """
     visualize detections in one image
     Parameters:
@@ -30,8 +30,8 @@ def visualize_detection(img_file, dets, classes=[], thresh=0.6):
     thresh : float
         score threshold
     """
-    bucket = s3.Bucket('ml-materials')
-    img1 = bucket.Object(f'object_detection_dataset/source_images/{img_file}').get().get('Body').read()
+    bucket = s3.Bucket(f'{source_bucket}')
+    img1 = bucket.Object(f'{source_prefix}/{img_file}').get().get('Body').read()
     imageRGB = cv2.imdecode(np.asarray(bytearray(img1)), cv2.COLOR_BGR2RGB)
     img = cv2.cvtColor(imageRGB , cv2.COLOR_BGR2RGB)
     #img=mpimg.imread(img_file)
@@ -73,7 +73,7 @@ def visualize_detection(img_file, dets, classes=[], thresh=0.6):
 
     return f, output
     
-def load_and_predict(file_name, predictor, threshold=0.5):
+def load_and_predict(file_name, predictor, threshold=0.5, source_bucket="ml-materials", source_prefix="object_detection_dataset/source_images"):
     """
     load an image, make object detection to an predictor, and visualize detections
     Parameters:
@@ -89,14 +89,15 @@ def load_and_predict(file_name, predictor, threshold=0.5):
     with open(file_name, 'rb') as image:
         f = image.read()
         b = bytearray(f)"""
-    bucket = s3.Bucket('ml-materials')
-    img = bucket.Object(f'object_detection_dataset/source_images/{file_name}').get().get('Body').read()
+    print(f"{source_bucket} {source_prefix} {file_name}")
+    bucket = s3.Bucket(f'{source_bucket}')
+    img = bucket.Object(f'{source_prefix}/{file_name}').get().get('Body').read()
     results = predictor.predict(img)
     #detections = json.loads(results)
     detections = results
     
     fig, detection_filtered = visualize_detection(file_name, detections['prediction'], 
-                                                   object_categories, threshold)
+                                                   object_categories, threshold, source_bucket=source_bucket, source_prefix=source_prefix)
     return results, detection_filtered, fig
 
 def only_predict(file_name, predictor, threshold=1.0):
